@@ -1,0 +1,44 @@
+|10 @Console/vector $2 &read $5 &type $1 &write $1 &error $1
+|20 @Screen/vector $2 &width $2 &height $2 &auto $2 &x $2 &y $2 &addr $2 &pixel $1 &sprite $1
+
+%MOD { ( a b -- c )
+	DIVk MUL SUB }
+
+|0100
+@on-reset ( -> )
+	#00 #00 #ff bayer-dither print-byte
+	BRK
+	LIT2 &y $2 LIT2 &x $2  ( y* x* -- )
+	INC2k ,/x STR2
+	#00ff NEQ2k ?{ POP2 POP2 INC2 ,/y STR2 #0000 ,/x STR2 !on-reset }
+	POP2 OVR2
+	#0001 NEQ2 ?{ POP2 POP2 #0000 ,/y STR2 #0000 ,/x STR2 BRK }
+	OVR2 OVR2 ( y* x* y* x* -- )
+	NIP DUP SWP2 NIP ( y* x* x y x -- )
+	bayer-dither
+	ROT ROT .Screen/x DEO2
+	ROT ROT .Screen/y DEO2
+	.Screen/pixel DEO
+	!on-reset
+
+@bayer-dither ( brightness x y -- 0|1 )
+	bayer-at GTH JMP2r
+
+@bayer-at ( x y -- v )
+	#04 MOD SWP ( modulo y to fit matrix )
+	#04 MOD SWP ( modulo x to fit matrix )
+	#04 MUL ADD ( calculate matrix offset )
+	#00 SWP ;bayer-matrix ADD2 LDA JMP2r ( calculate address )
+	
+@bayer-matrix
+	00 88 22 aa
+	cc 44 ee 66
+	33 bb 11 99
+	ff 77 dd 55
+
+@print-byte ( v -- )
+	DUP #04 SFT print-nybble print-nybble JMP2r
+
+@print-nybble ( v -- )
+	#0f AND DUP #09 GTH #27 MUL ADD
+	LIT "0 ADD #18 DEO JMP2r
